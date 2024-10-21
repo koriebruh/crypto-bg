@@ -95,6 +95,7 @@ function comparePasswords(decryptedText, passwordList) {
 
 function bruteForceRailFence(ciphertext, passwordList) {
     const results = [];
+    let passwordFound = false;
 
     // Iterate over possible keys from 2 to 5
     for (let key = 2; key <= 5; key++) {
@@ -102,13 +103,20 @@ function bruteForceRailFence(ciphertext, passwordList) {
         const { exactMatch, similarMatches } = comparePasswords(decrypted, passwordList);
 
         if (exactMatch) {
-            // If there's an exact match, return it and stop further processing
+            // If there's an exact match, add it to results and mark as found
             results.push({ key, decrypted, exactMatch: true });
+            passwordFound = true;
             break;
         } else if (similarMatches.length > 0) {
-            // If there are near matches, return them
+            // If there are near matches, add them to results
             results.push({ key, decrypted, similarMatches });
+            passwordFound = true;
         }
+    }
+
+    // If no password was found, add a "not found" result
+    if (!passwordFound) {
+        results.push({ notFound: true });
     }
 
     return results;
@@ -242,27 +250,31 @@ export default function RailFenceCipher() {
 
             {bruteForceResults.length > 0 && (
                 <div className="space-y-2">
-                    <h2 className="text-xl font-semibold">Hasil Brute Force</h2>
-                    <table className="min-w-full table-auto border-collapse border border-gray-200">
-                        <thead>
-                        <tr>
-                            <th className="border border-gray-300 px-4 py-2">Kunci</th>
-                            <th className="border border-gray-300 px-4 py-2">Teks Terdekripsi</th>
-                            <th className="border border-gray-300 px-4 py-2">Hasil</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {bruteForceResults.map((item, index) => (
-                            <tr key={index}>
-                                <td className="border border-gray-300 px-4 py-2">{item.key}</td>
-                                <td className="border border-gray-300 px-4 py-2">{item.decrypted}</td>
-                                <td className="border border-gray-300 px-4 py-2">
-                                    {item.exactMatch ? 'Cocok Persis' : `Mendekati (${item.similarMatches.join(', ')})`}
-                                </td>
+                    <h2 className="text-xl font-semibold">Hasil Brute Force Keypass</h2>
+                    {bruteForceResults[0].notFound ? (
+                        <p className="text-red-500">Password tidak terdapat di keypass dan tidak mendekati psw yang tersedia</p>
+                    ) : (
+                        <table className="min-w-full table-auto border-collapse border border-gray-200">
+                            <thead>
+                            <tr>
+                                <th className="border border-gray-300 px-4 py-2">Kunci</th>
+                                <th className="border border-gray-300 px-4 py-2">Teks Terdekripsi</th>
+                                <th className="border border-gray-300 px-4 py-2">Hasil</th>
                             </tr>
-                        ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                            {bruteForceResults.map((item, index) => (
+                                <tr key={index}>
+                                    <td className="border border-gray-300 px-4 py-2">{item.key}</td>
+                                    <td className="border border-gray-300 px-4 py-2">{item.decrypted}</td>
+                                    <td className="border border-gray-300 px-4 py-2">
+                                        {item.exactMatch ? 'Terdapat diKeypass' : `Mendekati (${item.similarMatches.join(', ')})`}
+                                    </td>
+                                </tr>
+                            ))}
+                            </tbody>
+                        </table>
+                    )}
                 </div>
             )}
 
