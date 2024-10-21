@@ -63,17 +63,57 @@ function analyzeRailFence(ciphertext) {
     return results.slice(0, 4); // Return top 3 results
 }
 
+// BLUTEFORCE HERE
+
+function comparePasswords(decryptedText, passwordList) {
+    // Filter exact matches
+    const exactMatches = passwordList.filter(password => password === decryptedText);
+
+    if (exactMatches.length > 0) {
+        return { exactMatch: exactMatches[0], similarMatches: [] };
+    }
+
+    // Filter near matches (for example, passwords that are at least 80% similar)
+    const similarMatches = passwordList.filter(password => {
+        const commonLength = Math.min(password.length, decryptedText.length);
+        let matchCount = 0;
+
+        // Count matching characters
+        for (let i = 0; i < commonLength; i++) {
+            if (password[i] === decryptedText[i]) {
+                matchCount++;
+            }
+        }
+
+        // Calculate similarity percentage
+        const similarity = matchCount / commonLength;
+        return similarity >= 0.8; // 80% similarity threshold
+    });
+
+    return { exactMatch: null, similarMatches };
+}
+
 function bruteForceRailFence(ciphertext, passwordList) {
     const results = [];
-    for (let password of passwordList) {
-        const key = parseInt(password);
-        if (!isNaN(key) && key > 1) {
-            const decrypted = decryptRailFence(ciphertext, key);
-            results.push({ key: password, decrypted });
+
+    // Iterate over possible keys from 2 to 5
+    for (let key = 2; key <= 5; key++) {
+        const decrypted = decryptRailFence(ciphertext, key);
+        const { exactMatch, similarMatches } = comparePasswords(decrypted, passwordList);
+
+        if (exactMatch) {
+            // If there's an exact match, return it and stop further processing
+            results.push({ key, decrypted, exactMatch: true });
+            break;
+        } else if (similarMatches.length > 0) {
+            // If there are near matches, return them
+            results.push({ key, decrypted, similarMatches });
         }
     }
+
     return results;
 }
+
 
 export default function RailFenceCipher() {
     const [text, setText] = useState('');
@@ -178,33 +218,54 @@ export default function RailFenceCipher() {
             {analysis.length > 0 && (
                 <div className="space-y-2">
                     <h2 className="text-xl font-semibold">Hasil Analisis</h2>
-                    {analysis.map((item, index) => (
-                        <div key={index} className="p-4 border rounded-lg bg-gray-50">
-                            <h3 className="text-lg font-medium">Kemungkinan Kunci: {item.key}</h3>
-                            <p className="mt-1">
-                                Teks terdekripsi: {item.decrypted}
-                            </p>
-                            <p className="mt-1">
-                                Skor: {item.score}
-                            </p>
-                        </div>
-                    ))}
+                    <table className="min-w-full table-auto border-collapse border border-gray-200">
+                        <thead>
+                        <tr>
+                            <th className="border border-gray-300 px-4 py-2">Kunci</th>
+                            <th className="border border-gray-300 px-4 py-2">Teks Terdekripsi</th>
+                            <th className="border border-gray-300 px-4 py-2">Skor</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {analysis.map((item, index) => (
+                            <tr key={index}>
+                                <td className="border border-gray-300 px-4 py-2">{item.key}</td>
+                                <td className="border border-gray-300 px-4 py-2">{item.decrypted}</td>
+                                <td className="border border-gray-300 px-4 py-2">{item.score}</td>
+                            </tr>
+                        ))}
+                        </tbody>
+                    </table>
                 </div>
             )}
+
 
             {bruteForceResults.length > 0 && (
                 <div className="space-y-2">
                     <h2 className="text-xl font-semibold">Hasil Brute Force</h2>
-                    {bruteForceResults.map((item, index) => (
-                        <div key={index} className="p-4 border rounded-lg bg-gray-50">
-                            <h3 className="text-lg font-medium">Kunci: {item.key}</h3>
-                            <p className="mt-1">
-                                Teks terdekripsi: {item.decrypted}
-                            </p>
-                        </div>
-                    ))}
+                    <table className="min-w-full table-auto border-collapse border border-gray-200">
+                        <thead>
+                        <tr>
+                            <th className="border border-gray-300 px-4 py-2">Kunci</th>
+                            <th className="border border-gray-300 px-4 py-2">Teks Terdekripsi</th>
+                            <th className="border border-gray-300 px-4 py-2">Hasil</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {bruteForceResults.map((item, index) => (
+                            <tr key={index}>
+                                <td className="border border-gray-300 px-4 py-2">{item.key}</td>
+                                <td className="border border-gray-300 px-4 py-2">{item.decrypted}</td>
+                                <td className="border border-gray-300 px-4 py-2">
+                                    {item.exactMatch ? 'Cocok Persis' : `Mendekati (${item.similarMatches.join(', ')})`}
+                                </td>
+                            </tr>
+                        ))}
+                        </tbody>
+                    </table>
                 </div>
             )}
+
         </div>
     );
 }
